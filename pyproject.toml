@@ -1,7 +1,7 @@
 [project]
 name = "simple-music"
-version = "0.1.0"
-description = "Simple Music Player and Live Streaming App"
+version = "0.2.0"
+description = "Simple Music Player App"
 requires-python = ">=3.10"
 dependencies = [
     "flet>=1.0.0",
@@ -15,5 +15,6 @@ project = "simple_music"
 permissions = [
     "READ_EXTERNAL_STORAGE",
     "READ_MEDIA_AUDIO",
+    "MANAGE_EXTERNAL_STORAGE",
     "INTERNET",
 ]

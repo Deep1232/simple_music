@@ -1,4 +1,6 @@
+import os
 import flet as ft
+import flet_audio as fta
 from components.header import HeaderComponent
 from components.player_bar import PlayerBarComponent
 from components.song_list import SongListComponent
@@ -11,84 +13,117 @@ def main(page: ft.Page):
     page.padding = 0
 
     state = {
-        "songs": [],
-        "current_index": -1,
+        "all_songs": [],
+        "filtered_songs": [],
+        "current_path": None,
         "is_playing": False,
+        "search_query": "",
     }
 
-    status_text = ft.Text(
-        "ਤਿਆਰ — ਗਾਣੇ 'ਤੇ ਕਲਿੱਕ ਕਰੋ",
-        color="#A6ADC8",
-        size=11,
-        max_lines=1,
-        overflow=ft.TextOverflow.ELLIPSIS,
+    audio_player = fta.Audio(
+        src="",
+        autoplay=False,
     )
+    page.overlay.append(audio_player)
 
-    async def _launch_song_url(song: dict):
-        url = song["url"]
-        try:
-            res = page.launch_url(url)
+    def _call_audio(method_name: str, *args):
+        fn = getattr(audio_player, method_name, None)
+        if callable(fn):
+            res = fn(*args)
             if hasattr(res, "__await__"):
-                await res
-            status_text.value = f"ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਚਾਲੂ: {song['title']}"
-        except Exception as err:
-            status_text.value = f"ਖੋਲ੍ਹਣ ਵਿੱਚ ਗਲਤੀ: {err}"
+                page.run_task(lambda: res)
+
+    def _get_filtered_songs():
+        q = state["search_query"].strip().lower()
+        if not q:
+            return list(state["all_songs"])
+        return [
+            s
+            for s in state["all_songs"]
+            if q in s["title"].lower() or q in s["folder"].lower()
+        ]
+
+    def _refresh_ui():
+        state["filtered_songs"] = _get_filtered_songs()
+        header_holder.content = HeaderComponent(
+            song_count=len(state["all_songs"]),
+            on_refresh=load_songs,
+            search_value=state["search_query"],
+            on_search_change=on_search_change,
+        )
+        song_list.render(
+            state["filtered_songs"],
+            current_path=state["current_path"],
+            is_playing=state["is_playing"],
+        )
         page.update()
 
-    def play_song(index):
-        if not state["songs"] or index < 0 or index >= len(state["songs"]):
+    def play_song_item(song: dict):
+        if not song or not os.path.exists(song["path"]):
             return
-        state["current_index"] = index
+        state["current_path"] = song["path"]
         state["is_playing"] = True
-        song = state["songs"][index]
-
-        status_text.value = f"ਖੋਲ੍ਹ ਰਿਹਾ ਹੈ: {song['title']}"
-        player_bar.update_state(song["title"], True)
-        song_list.render(state["songs"], state["current_index"])
-        page.update()
-        page.run_task(_launch_song_url, song)
+        audio_player.src = song["path"]
+        audio_player.autoplay = True
+        player_bar.update_state(song["title"], song["folder"], True)
+        _refresh_ui()
+        _call_audio("play")
 
     def toggle_play(e):
-        if not state["songs"]:
+        if not state["filtered_songs"] and not state["all_songs"]:
             return
-        if state["current_index"] == -1:
-            play_song(0)
+        pool = state["filtered_songs"] if state["filtered_songs"] else state["all_songs"]
+        if state["current_path"] is None:
+            play_song_item(pool[0])
             return
-        song = state["songs"][state["current_index"]]
+
+        current_song = next((s for s in state["all_songs"] if s["path"] == state["current_path"]), None)
+        if not current_song:
+            play_song_item(pool[0])
+            return
+
         if state["is_playing"]:
             state["is_playing"] = False
-            status_text.value = f"ਰੁਕਿਆ: {song['title']}"
-            player_bar.update_state(song["title"], False)
-            page.update()
+            player_bar.update_state(current_song["title"], current_song["folder"], False)
+            _call_audio("pause")
+            _refresh_ui()
         else:
             state["is_playing"] = True
-            player_bar.update_state(song["title"], True)
-            page.update()
-            page.run_task(_launch_song_url, song)
+            player_bar.update_state(current_song["title"], current_song["folder"], True)
+            _call_audio("resume")
+            _refresh_ui()
 
-    def open_in_browser(e):
-        if not state["songs"]:
+    def _step_song(delta: int):
+        pool = state["filtered_songs"] if state["filtered_songs"] else state["all_songs"]
+        if not pool:
             return
-        idx = state["current_index"] if state["current_index"] >= 0 else 0
-        page.run_task(_launch_song_url, state["songs"][idx])
+        idx = next((i for i, s in enumerate(pool) if s["path"] == state["current_path"]), -1)
+        next_idx = (idx + delta) % len(pool) if idx != -1 else 0
+        play_song_item(pool[next_idx])
 
     def prev_song(e):
-        if state["songs"]:
-            new_idx = (state["current_index"] - 1) % len(state["songs"])
-            play_song(new_idx)
+        _step_song(-1)
 
     def next_song(e):
-        if state["songs"]:
-            new_idx = (state["current_index"] + 1) % len(state["songs"])
-            play_song(new_idx)
+        _step_song(1)
+
+    def on_search_change(e):
+        state["search_query"] = e.control.value or ""
+        _refresh_ui()
 
     def load_songs(e=None):
-        state["songs"] = scan_mp3_files()
-        status_text.value = f"ਕੁੱਲ MP3: {len(state['songs'])}"
-        song_list.render(state["songs"], state["current_index"])
-        page.update()
+        state["all_songs"] = scan_mp3_files()
+        _refresh_ui()
 
-    song_list = SongListComponent(on_select_song=play_song)
+    header_holder = ft.Container(
+        content=HeaderComponent(
+            song_count=0,
+            on_refresh=load_songs,
+            search_value="",
+            on_search_change=on_search_change,
+        )
+    )
+    song_list = SongListComponent(on_select_song=play_song_item, on_refresh=load_songs)
     player_bar = PlayerBarComponent(
         on_prev=prev_song,
         on_toggle=toggle_play,
@@ -100,22 +135,7 @@ def main(page: ft.Page):
             expand=True,
             spacing=0,
             controls=[
-                HeaderComponent(on_refresh=load_songs),
-                ft.Container(
-                    padding=ft.Padding.symmetric(horizontal=16, vertical=6),
-                    bgcolor="#181825",
-                    content=ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        controls=[
-                            ft.Container(expand=True, content=status_text),
-                            ft.TextButton(
-                                "ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਖੋਲ੍ਹੋ",
-                                icon=ft.Icons.OPEN_IN_BROWSER,
-                                on_click=open_in_browser,
-                            ),
-                        ],
-                    ),
-                ),
+                header_holder,
                 song_list.build(),
                 player_bar.build(),
             ],
@@ -126,4 +146,4 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.run(main, view=ft.AppView.WEB_BROWSER, port=8550)
+    ft.run(main)
