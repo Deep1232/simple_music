@@ -10,29 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "17"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install Flutter SDK
-        run: |
-          git clone https://github.com/flutter/flutter.git -b stable --depth 1 $HOME/flutter
-          echo "$HOME/flutter/bin" >> $GITHUB_PATH
-          export PATH="$HOME/flutter/bin:$PATH"
-          flutter --version
       - name: Install Flet
         run: |
-          pip install --upgrade pip
-          pip install "flet>=1.0.0" flet-audio
+          python -m pip install --upgrade pip
+          pip install flet flet-audio
       - name: Build APK
-        run: |
-          export PATH="$HOME/flutter/bin:$PATH"
-          flet build apk --verbose
+        run: flet build apk --clear-cache --verbose
       - name: Upload APK
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: simple-music-apk
           path: build/apk/*.apk
