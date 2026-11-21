@@ -52,11 +52,16 @@ class SongListComponent:
                                 size=13,
                                 text_align=ft.TextAlign.CENTER,
                             ),
-                            ft.ElevatedButton(
-                                "ਮੁੜ ਸਕੈਨ ਕਰੋ",
-                                icon=ft.Icons.REFRESH_ROUNDED,
+                            ft.Button(
+                                content=ft.Row(
+                                    tight=True,
+                                    spacing=8,
+                                    controls=[
+                                        ft.Icon(ft.Icons.REFRESH_ROUNDED, color="#11111B", size=18),
+                                        ft.Text("ਮੁੜ ਸਕੈਨ ਕਰੋ", color="#11111B", weight=ft.FontWeight.W_600),
+                                    ],
+                                ),
                                 bgcolor="#89B4FA",
-                                color="#11111B",
                                 on_click=self.on_refresh,
                             ),
                         ],
