@@ -10,30 +10,12 @@ try:
 except Exception:
     fta = None
 
-try:
-    import flet_permission_handler as fph
-except Exception:
-    fph = None
 
-
-def _request_android_storage_permissions(page: ft.Page, perm_handler=None):
+def _request_android_storage_permissions(page: ft.Page):
     perms = [
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
     ]
-
-    if perm_handler is not None:
-        for method_name in ("request_permission", "request_permissions"):
-            fn = getattr(perm_handler, method_name, None)
-            if callable(fn):
-                try:
-                    res = fn(perms if method_name == "request_permissions" else perms[0])
-                    if hasattr(res, "__await__"):
-                        page.run_task(lambda r=res: r)
-                    return
-                except Exception:
-                    pass
-
     if hasattr(page, "request_permission"):
         for p in perms:
             try:
@@ -65,19 +47,6 @@ def main(page: ft.Page):
         "menu_open": False,
         "active_filter": "all",
     }
-
-    perm_handler = None
-    if fph is not None:
-        for cls_name in ("PermissionHandler",):
-            cls = getattr(fph, cls_name, None)
-            if callable(cls):
-                try:
-                    perm_handler = cls()
-                    if hasattr(page, "overlay") and isinstance(page.overlay, list):
-                        page.overlay.append(perm_handler)
-                    break
-                except Exception:
-                    perm_handler = None
 
     audio_player = None
     if fta is not None and hasattr(fta, "Audio"):
@@ -172,7 +141,7 @@ def main(page: ft.Page):
 
         def request_perms_and_scan(e):
             state["menu_open"] = False
-            _request_android_storage_permissions(page, perm_handler)
+            _request_android_storage_permissions(page)
             load_songs(e)
 
         def scan_and_close(e):
@@ -437,7 +406,7 @@ def main(page: ft.Page):
     _refresh_ui = _refresh_with_drawer
 
     page.add(main_layout)
-    _request_android_storage_permissions(page, perm_handler)
+    _request_android_storage_permissions(page)
     load_songs()
 
 
