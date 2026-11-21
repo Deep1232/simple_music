@@ -1,6 +1,6 @@
 [project]
 name = "simple-music"
-version = "0.2.0"
+version = "0.2.1"
 description = "Simple Music Player App"
 requires-python = ">=3.10"
 dependencies = [
@@ -12,9 +12,10 @@ dependencies = [
 org = "com.example.simplemusic"
 product = "Simple Music"
 project = "simple_music"
-permissions = [
-    "READ_EXTERNAL_STORAGE",
-    "READ_MEDIA_AUDIO",
-    "MANAGE_EXTERNAL_STORAGE",
-    "INTERNET",
-]
+
+[tool.flet.android.permission]
+"android.permission.READ_MEDIA_AUDIO" = true
+"android.permission.READ_EXTERNAL_STORAGE" = true
+"android.permission.WRITE_EXTERNAL_STORAGE" = true
+"android.permission.MANAGE_EXTERNAL_STORAGE" = true
+"android.permission.INTERNET" = true
