@@ -40,14 +40,14 @@ class SongListComponent:
                                 ),
                             ),
                             ft.Text(
-                                "ਕੋਈ MP3 ਗਾਣਾ ਨਹੀਂ ਮਿਲਿਆ",
+                                "No MP3 songs found",
                                 color="#F5E0DC",
                                 weight=ft.FontWeight.BOLD,
                                 size=16,
                                 text_align=ft.TextAlign.CENTER,
                             ),
                             ft.Text(
-                                "Music ਜਾਂ Download ਫੋਲਡਰ ਵਿੱਚ MP3 ਫਾਈਲਾਂ ਰੱਖੋ ਅਤੇ ਸਟੋਰੇਜ ਪਰਮਿਸ਼ਨ ਚੈੱਕ ਕਰੋ।",
+                                "Place MP3 files in Music or Download and allow storage/audio permission.",
                                 color="#A6ADC8",
                                 size=13,
                                 text_align=ft.TextAlign.CENTER,
@@ -58,7 +58,7 @@ class SongListComponent:
                                     spacing=8,
                                     controls=[
                                         ft.Icon(ft.Icons.REFRESH_ROUNDED, color="#11111B", size=18),
-                                        ft.Text("ਮੁੜ ਸਕੈਨ ਕਰੋ", color="#11111B", weight=ft.FontWeight.W_600),
+                                        ft.Text("Rescan", color="#11111B", weight=ft.FontWeight.W_600),
                                     ],
                                 ),
                                 bgcolor="#89B4FA",

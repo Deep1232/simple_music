@@ -4,7 +4,7 @@ import flet as ft
 class PlayerBarComponent:
     def __init__(self, on_prev, on_toggle, on_next):
         self.title_text = ft.Text(
-            "ਕੋਈ ਗਾਣਾ ਨਹੀਂ ਚੱਲ ਰਿਹਾ",
+            "No song playing",
             color="#F5E0DC",
             weight=ft.FontWeight.BOLD,
             size=14,
@@ -12,7 +12,7 @@ class PlayerBarComponent:
             overflow=ft.TextOverflow.ELLIPSIS,
         )
         self.subtitle_text = ft.Text(
-            "ਲਿਸਟ ਵਿੱਚੋਂ ਕੋਈ MP3 ਚੁਣੋ",
+            "Select an MP3 from the list",
             color="#A6ADC8",
             size=12,
             max_lines=1,
@@ -82,7 +82,7 @@ class PlayerBarComponent:
 
     def update_state(self, title: str, folder: str, is_playing: bool):
         self.title_text.value = title
-        self.subtitle_text.value = "ਚੱਲ ਰਿਹਾ ਹੈ" if is_playing else f"ਰੁਕਿਆ • {folder}"
+        self.subtitle_text.value = "Playing" if is_playing else f"Paused • {folder}"
         self.play_btn.icon = (
             ft.Icons.PAUSE_CIRCLE_FILLED_ROUNDED
             if is_playing

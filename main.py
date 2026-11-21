@@ -11,6 +11,28 @@ except Exception:
     fta = None
 
 
+def _request_android_storage_permissions(page: ft.Page):
+    perms = [
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+    ]
+    if hasattr(page, "request_permission"):
+        for p in perms:
+            try:
+                res = page.request_permission(p)
+                if hasattr(res, "__await__"):
+                    page.run_task(lambda r=res: r)
+            except Exception:
+                pass
+    elif hasattr(page, "request_permissions"):
+        try:
+            res = page.request_permissions(perms)
+            if hasattr(res, "__await__"):
+                page.run_task(lambda r=res: r)
+        except Exception:
+            pass
+
+
 def main(page: ft.Page):
     page.title = "Simple Music"
     page.bgcolor = "#11111B"
@@ -117,6 +139,11 @@ def main(page: ft.Page):
             state["menu_open"] = False
             _refresh_ui()
 
+        def request_perms_and_scan(e):
+            state["menu_open"] = False
+            _request_android_storage_permissions(page)
+            load_songs(e)
+
         def scan_and_close(e):
             state["menu_open"] = False
             load_songs(e)
@@ -159,7 +186,7 @@ def main(page: ft.Page):
                                                 color="#F5E0DC",
                                             ),
                                             ft.Text(
-                                                "ਫੀਚਰਜ਼ ਤੇ ਲਾਇਬ੍ਰੇਰੀ",
+                                                "Features & Library",
                                                 size=11,
                                                 color="#A6ADC8",
                                             ),
@@ -175,36 +202,41 @@ def main(page: ft.Page):
                         ],
                     ),
                     ft.Divider(color="#26263A", height=10),
-                    ft.Text("ਲਾਈਬ੍ਰੇਰੀ", size=11, color="#9399B2", weight=ft.FontWeight.BOLD),
+                    ft.Text("LIBRARY", size=11, color="#9399B2", weight=ft.FontWeight.BOLD),
                     _menu_item(
                         ft.Icons.QUEUE_MUSIC_ROUNDED,
-                        "ਸਾਰੇ ਗਾਣੇ",
+                        "All Songs",
                         str(len(state["all_songs"])),
                         active=state["active_filter"] == "all",
                         on_tap=select_filter("all"),
                     ),
                     _menu_item(
                         ft.Icons.ALBUM_ROUNDED,
-                        "Music ਫੋਲਡਰ",
+                        "Music Folder",
                         active=state["active_filter"] == "music",
                         on_tap=select_filter("music"),
                     ),
                     _menu_item(
                         ft.Icons.DOWNLOAD_ROUNDED,
-                        "Download ਫੋਲਡਰ",
+                        "Download Folder",
                         active=state["active_filter"] == "downloads",
                         on_tap=select_filter("downloads"),
                     ),
                     ft.Divider(color="#26263A", height=10),
-                    ft.Text("ਕਾਰਵਾਈਆਂ", size=11, color="#9399B2", weight=ft.FontWeight.BOLD),
+                    ft.Text("ACTIONS", size=11, color="#9399B2", weight=ft.FontWeight.BOLD),
+                    _menu_item(
+                        ft.Icons.LOCK_OPEN_ROUNDED,
+                        "Request Audio Permission",
+                        on_tap=request_perms_and_scan,
+                    ),
                     _menu_item(
                         ft.Icons.REFRESH_ROUNDED,
-                        "ਗਾਣੇ ਮੁੜ ਸਕੈਨ ਕਰੋ",
+                        "Rescan Songs",
                         on_tap=scan_and_close,
                     ),
                     _menu_item(
                         ft.Icons.CLEAR_ALL_ROUNDED,
-                        "ਸਰਚ ਤੇ ਫਿਲਟਰ ਸਾਫ਼ ਕਰੋ",
+                        "Clear Search & Filter",
                         on_tap=clear_search_and_close,
                     ),
                     ft.Container(expand=True),
@@ -216,13 +248,13 @@ def main(page: ft.Page):
                             spacing=4,
                             controls=[
                                 ft.Text(
-                                    "ਆਟੋ-ਸਕੈਨ ਤੇ ਆਡੀਓ ਪਲੇਅਰ",
+                                    "Auto Scan & Audio Player",
                                     size=12,
                                     weight=ft.FontWeight.BOLD,
                                     color="#A6E3A1",
                                 ),
                                 ft.Text(
-                                    "ਫੋਨ ਦੇ Music, Download ਅਤੇ ਹੋਰ ਫੋਲਡਰਾਂ ਵਿੱਚੋਂ MP3 ਲੱਭਦਾ ਹੈ।",
+                                    "Scans Music, Download, and audio folders for MP3 files.",
                                     size=11,
                                     color="#A6ADC8",
                                 ),
@@ -374,6 +406,7 @@ def main(page: ft.Page):
     _refresh_ui = _refresh_with_drawer
 
     page.add(main_layout)
+    _request_android_storage_permissions(page)
     load_songs()
 
 
