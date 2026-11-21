@@ -1,11 +1,12 @@
 [project]
 name = "simple-music"
-version = "0.2.1"
+version = "0.2.2"
 description = "Simple Music Player App"
 requires-python = ">=3.10"
 dependencies = [
     "flet>=1.0.0",
     "flet-audio>=1.0.0",
+    "flet-permission-handler>=0.1.0",
 ]
 
 [tool.flet]
