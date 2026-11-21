@@ -26,7 +26,7 @@ class PlayerBarComponent:
         )
         self.container = ft.Container(
             bgcolor="#181825",
-            padding=ft.Padding.only(left=14, right=10, top=10, bottom=12),
+            padding=ft.Padding.only(left=14, right=10, top=10, bottom=24),
             border=ft.Border.only(top=ft.BorderSide(1, "#313244")),
             content=ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,

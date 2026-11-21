@@ -1,10 +1,14 @@
 import os
 import flet as ft
-import flet_audio as fta
 from components.header import HeaderComponent
 from components.player_bar import PlayerBarComponent
 from components.song_list import SongListComponent
 from services.scanner import scan_mp3_files
+
+try:
+    import flet_audio as fta
+except Exception:
+    fta = None
 
 
 def main(page: ft.Page):
@@ -18,35 +22,235 @@ def main(page: ft.Page):
         "current_path": None,
         "is_playing": False,
         "search_query": "",
+        "menu_open": False,
+        "active_filter": "all",
     }
 
-    audio_player = fta.Audio(
-        src="",
-        autoplay=False,
-    )
-    page.overlay.append(audio_player)
+    audio_player = None
+    if fta is not None and hasattr(fta, "Audio"):
+        try:
+            audio_player = fta.Audio(src="", autoplay=False)
+        except Exception:
+            audio_player = None
 
     def _call_audio(method_name: str, *args):
+        if audio_player is None:
+            return
         fn = getattr(audio_player, method_name, None)
         if callable(fn):
-            res = fn(*args)
-            if hasattr(res, "__await__"):
-                page.run_task(lambda: res)
+            try:
+                res = fn(*args)
+                if hasattr(res, "__await__"):
+                    page.run_task(lambda: res)
+            except Exception:
+                pass
 
     def _get_filtered_songs():
         q = state["search_query"].strip().lower()
+        base = list(state["all_songs"])
+        if state["active_filter"] == "downloads":
+            base = [s for s in base if "download" in s["folder"].lower()]
+        elif state["active_filter"] == "music":
+            base = [s for s in base if "music" in s["folder"].lower()]
         if not q:
-            return list(state["all_songs"])
+            return base
         return [
             s
-            for s in state["all_songs"]
+            for s in base
             if q in s["title"].lower() or q in s["folder"].lower()
         ]
+
+    def _menu_item(icon, label, badge_text="", active=False, on_tap=None):
+        return ft.Container(
+            bgcolor="#24273A" if active else "transparent",
+            border_radius=12,
+            border=ft.Border.all(1, "#45475A" if active else "transparent"),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+            on_click=on_tap,
+            content=ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Row(
+                        spacing=12,
+                        controls=[
+                            ft.Icon(
+                                icon,
+                                color="#A6E3A1" if active else "#89B4FA",
+                                size=20,
+                            ),
+                            ft.Text(
+                                label,
+                                color="#F5E0DC" if active else "#CDD6F4",
+                                size=14,
+                                weight=ft.FontWeight.W_600 if active else ft.FontWeight.W_500,
+                            ),
+                        ],
+                    ),
+                    ft.Text(
+                        badge_text,
+                        color="#A6ADC8",
+                        size=12,
+                    ),
+                ],
+            ),
+        )
+
+    def _build_drawer_overlay():
+        if not state["menu_open"]:
+            return ft.Container(visible=False)
+
+        def close_menu(e=None):
+            state["menu_open"] = False
+            _refresh_ui()
+
+        def select_filter(mode):
+            def _handler(e):
+                state["active_filter"] = mode
+                state["menu_open"] = False
+                _refresh_ui()
+            return _handler
+
+        def clear_search_and_close(e):
+            state["search_query"] = ""
+            state["active_filter"] = "all"
+            state["menu_open"] = False
+            _refresh_ui()
+
+        def scan_and_close(e):
+            state["menu_open"] = False
+            load_songs(e)
+
+        drawer_panel = ft.Container(
+            width=285,
+            bgcolor="#181825",
+            border=ft.Border.only(right=ft.BorderSide(1, "#313244")),
+            padding=ft.Padding.only(left=16, right=16, top=18, bottom=24),
+            content=ft.Column(
+                expand=True,
+                spacing=10,
+                controls=[
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Row(
+                                spacing=10,
+                                controls=[
+                                    ft.Container(
+                                        width=38,
+                                        height=38,
+                                        border_radius=12,
+                                        bgcolor="#24273A",
+                                        alignment=ft.alignment.Alignment.CENTER,
+                                        content=ft.Icon(
+                                            ft.Icons.MUSIC_NOTE_ROUNDED,
+                                            color="#A6E3A1",
+                                            size=22,
+                                        ),
+                                    ),
+                                    ft.Column(
+                                        spacing=1,
+                                        controls=[
+                                            ft.Text(
+                                                "Simple Music",
+                                                size=17,
+                                                weight=ft.FontWeight.BOLD,
+                                                color="#F5E0DC",
+                                            ),
+                                            ft.Text(
+                                                "ਫੀਚਰਜ਼ ਤੇ ਲਾਇਬ੍ਰੇਰੀ",
+                                                size=11,
+                                                color="#A6ADC8",
+                                            ),
+                                        ],
+                                    ),
+                                ],
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.CLOSE_ROUNDED,
+                                icon_color="#CDD6F4",
+                                on_click=close_menu,
+                            ),
+                        ],
+                    ),
+                    ft.Divider(color="#26263A", height=10),
+                    ft.Text("ਲਾਈਬ੍ਰੇਰੀ", size=11, color="#9399B2", weight=ft.FontWeight.BOLD),
+                    _menu_item(
+                        ft.Icons.QUEUE_MUSIC_ROUNDED,
+                        "ਸਾਰੇ ਗਾਣੇ",
+                        str(len(state["all_songs"])),
+                        active=state["active_filter"] == "all",
+                        on_tap=select_filter("all"),
+                    ),
+                    _menu_item(
+                        ft.Icons.ALBUM_ROUNDED,
+                        "Music ਫੋਲਡਰ",
+                        active=state["active_filter"] == "music",
+                        on_tap=select_filter("music"),
+                    ),
+                    _menu_item(
+                        ft.Icons.DOWNLOAD_ROUNDED,
+                        "Download ਫੋਲਡਰ",
+                        active=state["active_filter"] == "downloads",
+                        on_tap=select_filter("downloads"),
+                    ),
+                    ft.Divider(color="#26263A", height=10),
+                    ft.Text("ਕਾਰਵਾਈਆਂ", size=11, color="#9399B2", weight=ft.FontWeight.BOLD),
+                    _menu_item(
+                        ft.Icons.REFRESH_ROUNDED,
+                        "ਗਾਣੇ ਮੁੜ ਸਕੈਨ ਕਰੋ",
+                        on_tap=scan_and_close,
+                    ),
+                    _menu_item(
+                        ft.Icons.CLEAR_ALL_ROUNDED,
+                        "ਸਰਚ ਤੇ ਫਿਲਟਰ ਸਾਫ਼ ਕਰੋ",
+                        on_tap=clear_search_and_close,
+                    ),
+                    ft.Container(expand=True),
+                    ft.Container(
+                        bgcolor="#24273A",
+                        border_radius=12,
+                        padding=12,
+                        content=ft.Column(
+                            spacing=4,
+                            controls=[
+                                ft.Text(
+                                    "ਆਟੋ-ਸਕੈਨ ਤੇ ਆਡੀਓ ਪਲੇਅਰ",
+                                    size=12,
+                                    weight=ft.FontWeight.BOLD,
+                                    color="#A6E3A1",
+                                ),
+                                ft.Text(
+                                    "ਫੋਨ ਦੇ Music, Download ਅਤੇ ਹੋਰ ਫੋਲਡਰਾਂ ਵਿੱਚੋਂ MP3 ਲੱਭਦਾ ਹੈ।",
+                                    size=11,
+                                    color="#A6ADC8",
+                                ),
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+        )
+
+        return ft.Container(
+            expand=True,
+            bgcolor="#99000000",
+            content=ft.Row(
+                expand=True,
+                spacing=0,
+                controls=[
+                    drawer_panel,
+                    ft.Container(expand=True, on_click=close_menu),
+                ],
+            ),
+        )
 
     def _refresh_ui():
         state["filtered_songs"] = _get_filtered_songs()
         header_holder.content = HeaderComponent(
             song_count=len(state["all_songs"]),
+            on_menu_click=toggle_menu,
             on_refresh=load_songs,
             search_value=state["search_query"],
             on_search_change=on_search_change,
@@ -56,23 +260,29 @@ def main(page: ft.Page):
             current_path=state["current_path"],
             is_playing=state["is_playing"],
         )
+        drawer_holder.content = _build_drawer_overlay()
         page.update()
+
+    def toggle_menu(e=None):
+        state["menu_open"] = not state["menu_open"]
+        _refresh_ui()
 
     def play_song_item(song: dict):
         if not song or not os.path.exists(song["path"]):
             return
         state["current_path"] = song["path"]
         state["is_playing"] = True
-        audio_player.src = song["path"]
-        audio_player.autoplay = True
+        if audio_player is not None:
+            audio_player.src = song["path"]
+            audio_player.autoplay = True
         player_bar.update_state(song["title"], song["folder"], True)
         _refresh_ui()
         _call_audio("play")
 
     def toggle_play(e):
-        if not state["filtered_songs"] and not state["all_songs"]:
-            return
         pool = state["filtered_songs"] if state["filtered_songs"] else state["all_songs"]
+        if not pool:
+            return
         if state["current_path"] is None:
             play_song_item(pool[0])
             return
@@ -118,6 +328,7 @@ def main(page: ft.Page):
     header_holder = ft.Container(
         content=HeaderComponent(
             song_count=0,
+            on_menu_click=toggle_menu,
             on_refresh=load_songs,
             search_value="",
             on_search_change=on_search_change,
@@ -129,19 +340,40 @@ def main(page: ft.Page):
         on_toggle=toggle_play,
         on_next=next_song,
     )
+    drawer_holder = ft.Container(expand=True, visible=False)
 
-    page.add(
-        ft.Column(
+    main_layout = ft.SafeArea(
+        expand=True,
+        content=ft.Stack(
             expand=True,
-            spacing=0,
             controls=[
-                header_holder,
-                song_list.build(),
-                player_bar.build(),
+                ft.Column(
+                    expand=True,
+                    spacing=0,
+                    controls=[
+                        header_holder,
+                        song_list.build(),
+                        player_bar.build(),
+                    ],
+                ),
+                drawer_holder,
             ],
-        )
+        ),
     )
 
+    def _sync_drawer_visibility():
+        drawer_holder.visible = state["menu_open"]
+
+    orig_refresh = _refresh_ui
+
+    def _refresh_with_drawer():
+        orig_refresh()
+        _sync_drawer_visibility()
+        page.update()
+
+    _refresh_ui = _refresh_with_drawer
+
+    page.add(main_layout)
     load_songs()
 
 

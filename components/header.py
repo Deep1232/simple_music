@@ -1,10 +1,10 @@
 import flet as ft
 
 
-def HeaderComponent(song_count: int, on_refresh, search_value: str, on_search_change):
+def HeaderComponent(song_count: int, on_menu_click, on_refresh, search_value: str, on_search_change):
     return ft.Container(
         bgcolor="#181825",
-        padding=ft.Padding.only(left=18, right=14, top=14, bottom=12),
+        padding=ft.Padding.only(left=14, right=14, top=12, bottom=12),
         border=ft.Border.only(bottom=ft.BorderSide(1, "#26263A")),
         content=ft.Column(
             spacing=12,
@@ -17,15 +17,14 @@ def HeaderComponent(song_count: int, on_refresh, search_value: str, on_search_ch
                             spacing=10,
                             controls=[
                                 ft.Container(
-                                    width=38,
-                                    height=38,
-                                    border_radius=12,
                                     bgcolor="#24273A",
-                                    alignment=ft.alignment.Alignment.CENTER,
-                                    content=ft.Icon(
-                                        ft.Icons.LIBRARY_MUSIC_ROUNDED,
-                                        color="#A6E3A1",
-                                        size=22,
+                                    border_radius=12,
+                                    content=ft.IconButton(
+                                        icon=ft.Icons.MENU_ROUNDED,
+                                        icon_color="#F5E0DC",
+                                        icon_size=22,
+                                        tooltip="ਮੀਨੂ",
+                                        on_click=on_menu_click,
                                     ),
                                 ),
                                 ft.Column(
@@ -38,7 +37,7 @@ def HeaderComponent(song_count: int, on_refresh, search_value: str, on_search_ch
                                             color="#F5E0DC",
                                         ),
                                         ft.Text(
-                                            f"{song_count} MP3 ਗਾਣੇ ਉਪਲਬਧ",
+                                            f"{song_count} MP3 ਗਾਣੇ",
                                             size=12,
                                             color="#A6ADC8",
                                         ),
