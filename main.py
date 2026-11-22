@@ -280,12 +280,9 @@ def main(page: ft.Page):
 
     def _refresh_ui():
         state["filtered_songs"] = _get_filtered_songs()
-        header_holder.content = HeaderComponent(
+        header.update_state(
             song_count=len(state["all_songs"]),
-            on_menu_click=toggle_menu,
-            on_refresh=load_songs,
             search_value=state["search_query"],
-            on_search_change=on_search_change,
         )
         song_list.render(
             state["filtered_songs"],
@@ -293,6 +290,7 @@ def main(page: ft.Page):
             is_playing=state["is_playing"],
         )
         drawer_holder.content = _build_drawer_overlay()
+        drawer_holder.visible = state["menu_open"]
         page.update()
 
     def toggle_menu(e=None):
@@ -357,14 +355,10 @@ def main(page: ft.Page):
         state["all_songs"] = scan_mp3_files()
         _refresh_ui()
 
-    header_holder = ft.Container(
-        content=HeaderComponent(
-            song_count=0,
-            on_menu_click=toggle_menu,
-            on_refresh=load_songs,
-            search_value="",
-            on_search_change=on_search_change,
-        )
+    header = HeaderComponent(
+        on_menu_click=toggle_menu,
+        on_refresh=load_songs,
+        on_search_change=on_search_change,
     )
     song_list = SongListComponent(on_select_song=play_song_item, on_refresh=load_songs)
     player_bar = PlayerBarComponent(
@@ -383,7 +377,7 @@ def main(page: ft.Page):
                     expand=True,
                     spacing=0,
                     controls=[
-                        header_holder,
+                        header.build(),
                         song_list.build(),
                         player_bar.build(),
                     ],
@@ -392,18 +386,6 @@ def main(page: ft.Page):
             ],
         ),
     )
-
-    def _sync_drawer_visibility():
-        drawer_holder.visible = state["menu_open"]
-
-    orig_refresh = _refresh_ui
-
-    def _refresh_with_drawer():
-        orig_refresh()
-        _sync_drawer_visibility()
-        page.update()
-
-    _refresh_ui = _refresh_with_drawer
 
     page.add(main_layout)
     _request_android_storage_permissions(page)
